@@ -8,7 +8,7 @@ from supabase import create_client, Client
 import pandas as pd
 import plotly.graph_objs as go
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 load_dotenv()
 
@@ -52,8 +52,8 @@ async def dashboard(request: Request):
         return templates.TemplateResponse("dashboard.html", {"request": request, "plot_raw": "", "plot_voltage": ""})
 
     # Convert timestamp to datetime and filter last 24 hours
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
-    now = datetime.utcnow()
+    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+    now = datetime.now(timezone.utc)
     last_day = now - timedelta(days=1)
     df = df[df["timestamp"] >= last_day]
 
