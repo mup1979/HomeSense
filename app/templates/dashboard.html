@@ -1,50 +1,52 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Dashboard - HomeSense</title>
-  <link rel="stylesheet" href="/static/style.css">
-  <style>
-    body {
-      background-color: #1e1e1e;
-      color: #fff;
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 2rem;
-    }
-    .container {
-      max-width: 1600px;
-      margin: auto;
-    }
-    .card {
-      background-color: #2c2c2c;
-      border-radius: 12px;
-      padding: 2rem;
-      margin-top: 2rem;
-      box-shadow: 0 0 12px rgba(255,255,255,0.1);
-    }
-    .chart-wrapper {
-      display: flex;
-      gap: 2rem;
-      justify-content: center;
-      align-items: flex-start;
-      flex-wrap: wrap;
-    }
-    iframe {
-      width: 100%;
-      border: none;
-    }
-    a {
-      color: #1e90ff;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <title>Dashboard - HomeSense</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
 </head>
 <body>
-  <div class="container">
-    <h2>🌊 Turbidity Dashboard</h2>
-    <div class="card">
-      {{ plot_html | safe }}
+    <div class="dashboard-container">
+        <header>
+            <h1>Turbidity Dashboard</h1>
+        </header>
+
+        <div class="dashboard-grid">
+            <div class="chart-card">
+                <h3>Raw Data</h3>
+                <div id="raw-chart"></div>
+            </div>
+            <div class="chart-card">
+                <h3>Voltage</h3>
+                <div id="voltage-chart"></div>
+            </div>
+        </div>
+
+        <div class="config-link">
+            <a href="/config">Go to Config</a>
+        </div>
     </div>
-    <p><a href="/config">⚙️ Go to Config</a></p>
-  </div>
+
+    <script>
+        const rawData = {{ raw_data|safe }};
+        const voltageData = {{ voltage_data|safe }};
+
+        Plotly.newPlot('raw-chart', rawData, {
+            margin: { t: 30 },
+            paper_bgcolor: '#1e1e1e',
+            plot_bgcolor: '#1e1e1e',
+            font: { color: 'white' },
+            legend: { orientation: 'h' }
+        });
+
+        Plotly.newPlot('voltage-chart', voltageData, {
+            margin: { t: 30 },
+            paper_bgcolor: '#1e1e1e',
+            plot_bgcolor: '#1e1e1e',
+            font: { color: 'white' },
+            legend: { orientation: 'h' }
+        });
+    </script>
 </body>
 </html>

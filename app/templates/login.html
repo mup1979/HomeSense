@@ -1,30 +1,20 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Login - HomeSense</title>
-  <link rel="stylesheet" href="/static/style.css">
+    <meta charset="UTF-8">
+    <title>Login</title>
+    <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-
-  <!-- 🎥 Background Video -->
-  <video autoplay muted loop id="bg-video">
-    <source src="/static/video/Home.mp4" type="video/mp4">
-    Your browser does not support the video tag.
-  </video>
-
-  <!-- 💾 Login Box -->
-  <div class="login-box">
-    <h2>🔐 Login to HomeSense</h2>
-
-    {% if error %}
-      <p style="color:red">{{ error }}</p>
-    {% endif %}
-
-    <form method="post" action="/login">
-      <input type="text" name="email" placeholder="Email" required><br><br>
-      <input type="password" name="password" placeholder="Password" required><br><br>
-      <button type="submit">Login</button>
-    </form>
-  </div>
+    <div class="login-container">
+        <div class="login-form">
+            <h2>Login</h2>
+            <form action="/login" method="post">
+                <input type="email" name="email" placeholder="Email" required>
+                <input type="password" name="password" placeholder="Password" required>
+                <button type="submit">Login</button>
+            </form>
+        </div>
+    </div>
 </body>
 </html>
