@@ -2,51 +2,63 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard - HomeSense</title>
+    <title>Dashboard</title>
     <link rel="stylesheet" href="/static/style.css">
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body {
+            background-color: #1e1e1e;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            padding: 20px;
+        }
+
+        .charts {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .chart-box {
+            flex: 1 1 45%;
+            min-width: 300px;
+            max-width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: white;
+        }
+
+        .no-data {
+            text-align: center;
+            margin-top: 50px;
+            font-size: 20px;
+            color: #ff6666;
+        }
+    </style>
 </head>
 <body>
-    <div class="dashboard-container">
-        <header>
-            <h1>Turbidity Dashboard</h1>
-        </header>
-
-        <div class="dashboard-grid">
-            <div class="chart-card">
-                <h3>Raw Data</h3>
-                <div id="raw-chart"></div>
+    <div class="container">
+        <h1>Turbidity Dashboard</h1>
+        {% if no_data %}
+            <div class="no-data">No data available from Supabase.</div>
+        {% else %}
+            <div class="charts">
+                <div class="chart-box">
+                    {{ chart1 | safe }}
+                </div>
+                <div class="chart-box">
+                    {{ chart2 | safe }}
+                </div>
             </div>
-            <div class="chart-card">
-                <h3>Voltage</h3>
-                <div id="voltage-chart"></div>
-            </div>
-        </div>
-
-        <div class="config-link">
-            <a href="/config">Go to Config</a>
-        </div>
+        {% endif %}
     </div>
-
-    <script>
-        const rawData = {{ raw_data|safe }};
-        const voltageData = {{ voltage_data|safe }};
-
-        Plotly.newPlot('raw-chart', rawData, {
-            margin: { t: 30 },
-            paper_bgcolor: '#1e1e1e',
-            plot_bgcolor: '#1e1e1e',
-            font: { color: 'white' },
-            legend: { orientation: 'h' }
-        });
-
-        Plotly.newPlot('voltage-chart', voltageData, {
-            margin: { t: 30 },
-            paper_bgcolor: '#1e1e1e',
-            plot_bgcolor: '#1e1e1e',
-            font: { color: 'white' },
-            legend: { orientation: 'h' }
-        });
-    </script>
 </body>
 </html>
