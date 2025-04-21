@@ -4,8 +4,5 @@ python-dotenv
 jinja2
 httpx
 supabase
-python-multipart
-matplotlib
-plotly
-plotly
 pandas
+plotly
