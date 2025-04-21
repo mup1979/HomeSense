@@ -6,3 +6,5 @@ httpx
 supabase
 python-multipart
 matplotlib
+plotly
+plotly
