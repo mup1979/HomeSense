@@ -1,99 +1,85 @@
-from fastapi import FastAPI, Request, Form
+from fastapi import FastAPI, Request, Form, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from app.services.supabase import supabase
+from supabase import create_client, Client
 import pandas as pd
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
+import plotly.graph_objs as go
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 app = FastAPI()
 
+# Mount static files
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+# Jinja2 templates
 templates = Jinja2Templates(directory="app/templates")
 
+# Supabase client
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# Auth Dependency
+def get_user(request: Request):
+    return request.session.get("user")
+
+# Routes
 @app.get("/", response_class=HTMLResponse)
 def login_page(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
-@app.post("/login")
+@app.post("/login", response_class=HTMLResponse)
 def login(request: Request, email: str = Form(...), password: str = Form(...)):
     try:
         user = supabase.auth.sign_in_with_password({"email": email, "password": password})
-        if user:
-            response = RedirectResponse(url="/dashboard", status_code=302)
-            response.set_cookie(key="user_email", value=email)
-            return response
-    except Exception as e:
-        print("Login failed:", e)
-    return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid credentials"})
+        request.session = {"user": user}
+        return RedirectResponse(url="/dashboard", status_code=303)
+    except Exception:
+        return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid credentials"})
 
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request):
-    email = request.cookies.get("user_email")
-    if not email:
-        return RedirectResponse(url="/", status_code=302)
+    response = supabase.table("turbidity_data").select("*").order("timestamp", desc=True).limit(100).execute()
+    rows = response.data[::-1]  # reverse to chronological order
 
-    data = supabase.table("turbidity_data").select("*").order("timestamp", desc=True).limit(100).execute()
-    rows = data.data[::-1]
+    # Debug output
+    print("Fetched rows:", rows)
+
+    if not rows:
+        return templates.TemplateResponse("dashboard.html", {"request": request, "charts": None})
+
     df = pd.DataFrame(rows)
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
 
-    if df.empty:
-        return templates.TemplateResponse("dashboard.html", {"request": request, "graph": "<p>No data available.</p>"})
+    # Extract data
+    sensor1 = df[df["sensor"] == "Sensor1"]
+    sensor2 = df[df["sensor"] == "Sensor2"]
 
-    fig = make_subplots(
-        rows=1,
-        cols=2,
-        subplot_titles=("Raw Data", "Voltage"),
-        horizontal_spacing=0.2
-    )
+    # Debug print
+    print("Sensor1:", sensor1)
+    print("Sensor2:", sensor2)
 
-    # Raw values
-    fig.add_trace(go.Scatter(
-        x=df[df["sensor_id"] == "Sensor1"]["timestamp"],
-        y=df[df["sensor_id"] == "Sensor1"]["raw_value"],
-        mode="lines+markers",
-        name="Sensor1 Raw",
-        line=dict(color="white")
-    ), row=1, col=1)
+    # Raw Data Plot
+    fig_raw = go.Figure()
+    fig_raw.add_trace(go.Scatter(x=sensor1["timestamp"], y=sensor1["value"], mode='lines+markers', name="Sensor1 Raw", line=dict(color='white')))
+    fig_raw.add_trace(go.Scatter(x=sensor2["timestamp"], y=sensor2["value"], mode='lines+markers', name="Sensor2 Raw", line=dict(color='orange')))
+    fig_raw.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'))
 
-    fig.add_trace(go.Scatter(
-        x=df[df["sensor_id"] == "Sensor2"]["timestamp"],
-        y=df[df["sensor_id"] == "Sensor2"]["raw_value"],
-        mode="lines+markers",
-        name="Sensor2 Raw",
-        line=dict(color="orange")
-    ), row=1, col=1)
+    # Voltage Chart (assuming value / 6000 gives voltage)
+    fig_voltage = go.Figure()
+    fig_voltage.add_trace(go.Scatter(x=sensor1["timestamp"], y=sensor1["value"] / 6000, mode='lines+markers', name="Sensor1 Voltage", line=dict(color='white', dash='dot')))
+    fig_voltage.add_trace(go.Scatter(x=sensor2["timestamp"], y=sensor2["value"] / 6000, mode='lines+markers', name="Sensor2 Voltage", line=dict(color='orange', dash='dot')))
+    fig_voltage.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font=dict(color='white'))
 
-    # Voltage values
-    fig.add_trace(go.Scatter(
-        x=df[df["sensor_id"] == "Sensor1"]["timestamp"],
-        y=df[df["sensor_id"] == "Sensor1"]["voltage"],
-        mode="lines+markers",
-        name="Sensor1 Voltage",
-        line=dict(color="white", dash="dot")
-    ), row=1, col=2)
+    raw_html = fig_raw.to_html(full_html=False, include_plotlyjs='cdn')
+    voltage_html = fig_voltage.to_html(full_html=False, include_plotlyjs=False)
 
-    fig.add_trace(go.Scatter(
-        x=df[df["sensor_id"] == "Sensor2"]["timestamp"],
-        y=df[df["sensor_id"] == "Sensor2"]["voltage"],
-        mode="lines+markers",
-        name="Sensor2 Voltage",
-        line=dict(color="orange", dash="dot")
-    ), row=1, col=2)
-
-    fig.update_layout(
-        template="plotly_dark",
-        showlegend=True,
-        height=500,
-        autosize=True,
-        margin=dict(t=40, b=40, l=40, r=40),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="center", x=0.5)
-    )
-
-    graph_html = fig.to_html(full_html=False, config={"responsive": True})
-    return templates.TemplateResponse("dashboard.html", {"request": request, "graph": graph_html})
-
-@app.get("/config", response_class=HTMLResponse)
-def config_page(request: Request):
-    return templates.TemplateResponse("config.html", {"request": request})
+    return templates.TemplateResponse("dashboard.html", {
+        "request": request,
+        "raw_chart": raw_html,
+        "voltage_chart": voltage_html
+    })
