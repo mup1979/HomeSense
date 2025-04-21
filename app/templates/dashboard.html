@@ -9,8 +9,13 @@
 <body>
   <div class="container">
     <h1 class="dashboard-title">Turbidity Dashboard</h1>
+
     <div class="chart-container">
-      {{ plot_html | safe }}
+      {{ plot_raw | safe }}
+    </div>
+
+    <div class="chart-container">
+      {{ plot_voltage | safe }}
     </div>
   </div>
 </body>
