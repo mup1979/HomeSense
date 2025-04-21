@@ -20,8 +20,8 @@
         {% for row in data %}
         <tr>
           <td>{{ row.timestamp }}</td>
-          <td>{{ row.sensor_name }}</td>
-          <td>{{ row.value }}</td>
+	  <td>{{ row.sensor_id }}</td>
+	  <td>{{ row.raw_value }}</td>
         </tr>
         {% endfor %}
       </tbody>
