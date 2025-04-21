@@ -1,98 +1,115 @@
 from fastapi import FastAPI, Request, Form
-from fastapi.responses import RedirectResponse
-from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from starlette.middleware.sessions import SessionMiddleware
+from supabase import create_client, Client
 import os
 import pandas as pd
 import plotly.graph_objs as go
-from supabase import create_client, Client
+from plotly.subplots import make_subplots
 from dotenv import load_dotenv
 
 load_dotenv()
 
 app = FastAPI()
-app.add_middleware(SessionMiddleware, secret_key="super-secret")
+
+# Middleware
+app.add_middleware(SessionMiddleware, secret_key=os.environ.get("SESSION_SECRET_KEY", "supersecret"))
+
+# Static files and templates
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+# Supabase config
+url = os.environ.get("SUPABASE_URL")
+key = os.environ.get("SUPABASE_KEY")
+supabase: Client = create_client(url, key)
 
-@app.get("/")
+
+@app.get("/", response_class=HTMLResponse)
 def login_page(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
-@app.post("/login")
+
+@app.post("/login", response_class=HTMLResponse)
 def login(request: Request, email: str = Form(...), password: str = Form(...)):
-    user = supabase.auth.sign_in_with_password({"email": email, "password": password})
-    if user.user:
-        request.session["user"] = user.user.email
-        return RedirectResponse(url="/dashboard", status_code=302)
-    return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid credentials"})
-
-@app.get("/dashboard")
-def dashboard(request: Request):
-    if "user" not in request.session:
-        return RedirectResponse(url="/", status_code=302)
-
     try:
-        response = supabase.table("turbidity_data").select("*").limit(500).execute()
-        data = response.data
+        user = supabase.auth.sign_in_with_password({"email": email, "password": password})
+        if not user or not user.user:
+            return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid credentials."})
+        request.session["user"] = user.user.id
+        return RedirectResponse(url="/dashboard", status_code=303)
     except Exception as e:
+        print("❌ Login Error:", e)
+        return templates.TemplateResponse("login.html", {"request": request, "error": "Authentication failed."})
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+def dashboard(request: Request):
+    try:
+        print("📡 Fetching data from Supabase...")
+        response = supabase.table("turbidity_data").select("*").order("timestamp", desc=True).limit(200).execute()
+
+        if not response or not response.data:
+            print("⚠️ No data received from Supabase.")
+            return templates.TemplateResponse("dashboard.html", {
+                "request": request,
+                "plot1": "",
+                "plot2": "",
+                "error": "No data returned from Supabase"
+            })
+
+        print("✅ Supabase returned data")
+
+        df = pd.DataFrame(response.data)
+        print("📊 Raw DataFrame:\n", df.head())
+        print("📋 Columns:", df.columns.tolist())
+
+        if "sensor_id" not in df.columns:
+            return templates.TemplateResponse("dashboard.html", {
+                "request": request,
+                "plot1": "",
+                "plot2": "",
+                "error": "Missing 'sensor_id' column in data"
+            })
+
+        df["timestamp"] = pd.to_datetime(df["timestamp"])
+        sensor1 = df[df["sensor_id"] == "Sensor1"]
+        sensor2 = df[df["sensor_id"] == "Sensor2"]
+
+        print(f"📈 Sensor1 records: {len(sensor1)}")
+        print(f"📈 Sensor2 records: {len(sensor2)}")
+
+        fig = make_subplots(rows=1, cols=2, subplot_titles=("Raw Data", "Voltage"))
+
+        # Raw Data Plot
+        fig.add_trace(go.Scatter(x=sensor1["timestamp"], y=sensor1["raw_value"],
+                                 mode="lines+markers", name="Sensor1 Raw", line=dict(color="orange")), row=1, col=1)
+        fig.add_trace(go.Scatter(x=sensor2["timestamp"], y=sensor2["raw_value"],
+                                 mode="lines+markers", name="Sensor2 Raw", line=dict(color="white")), row=1, col=1)
+
+        # Voltage Plot
+        fig.add_trace(go.Scatter(x=sensor1["timestamp"], y=sensor1["voltage"],
+                                 mode="lines+markers", name="Sensor1 Voltage", line=dict(color="orange", dash="dot")), row=1, col=2)
+        fig.add_trace(go.Scatter(x=sensor2["timestamp"], y=sensor2["voltage"],
+                                 mode="lines+markers", name="Sensor2 Voltage", line=dict(color="white", dash="dot")), row=1, col=2)
+
+        fig.update_layout(template="plotly_dark", height=500, width=1200, showlegend=True)
+        plot_html = fig.to_html(full_html=False)
+
+        return templates.TemplateResponse("dashboard.html", {
+            "request": request,
+            "plot1": plot_html,
+            "plot2": "",
+            "error": ""
+        })
+
+    except Exception as e:
+        print("🔥 Dashboard Error:", e)
         return templates.TemplateResponse("dashboard.html", {
             "request": request,
             "plot1": "",
             "plot2": "",
-            "error": f"Error loading data from Supabase: {str(e)}"
+            "error": f"Dashboard error: {str(e)}"
         })
-
-    if not data:
-        return templates.TemplateResponse("dashboard.html", {
-            "request": request,
-            "plot1": "",
-            "plot2": "",
-            "error": "No data available"
-        })
-
-    df = pd.DataFrame(data)
-
-    if "sensor_id" not in df.columns or "raw_value" not in df.columns or "voltage" not in df.columns:
-        return templates.TemplateResponse("dashboard.html", {
-            "request": request,
-            "plot1": "",
-            "plot2": "",
-            "error": "Missing required columns in database"
-        })
-
-    df["timestamp"] = pd.to_datetime(df["timestamp"])
-
-    sensor1 = df[df["sensor_id"] == "Sensor1"]
-    sensor2 = df[df["sensor_id"] == "Sensor2"]
-
-    # Plot raw_value
-    fig1 = go.Figure()
-    fig1.add_trace(go.Scatter(x=sensor1["timestamp"], y=sensor1["raw_value"], mode='lines+markers',
-                              name="Sensor1", line=dict(color="orange")))
-    fig1.add_trace(go.Scatter(x=sensor2["timestamp"], y=sensor2["raw_value"], mode='lines+markers',
-                              name="Sensor2", line=dict(color="white")))
-    fig1.update_layout(title="Raw Data", paper_bgcolor="#111", plot_bgcolor="#111", font_color="white")
-
-    # Plot voltage
-    fig2 = go.Figure()
-    fig2.add_trace(go.Scatter(x=sensor1["timestamp"], y=sensor1["voltage"], mode='lines+markers',
-                              name="Sensor1", line=dict(color="orange", dash='dash')))
-    fig2.add_trace(go.Scatter(x=sensor2["timestamp"], y=sensor2["voltage"], mode='lines+markers',
-                              name="Sensor2", line=dict(color="white", dash='dash')))
-    fig2.update_layout(title="Voltage", paper_bgcolor="#111", plot_bgcolor="#111", font_color="white")
-
-    plot1 = fig1.to_html(full_html=False)
-    plot2 = fig2.to_html(full_html=False)
-
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
-        "plot1": plot1,
-        "plot2": plot2,
-        "error": None
-    })
