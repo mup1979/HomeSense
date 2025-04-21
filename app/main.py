@@ -1,40 +1,54 @@
 from fastapi import FastAPI, Request, Form
-from fastapi.responses import RedirectResponse
-from fastapi.templating import Jinja2Templates
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from app.services.supabase import supabase, get_user_role
+from fastapi.templating import Jinja2Templates
+from supabase import create_client, Client
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 app = FastAPI()
-templates = Jinja2Templates(directory="app/templates")
+
+# Mount static assets
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-@app.get("/")
-def login_page(request: Request):
+# Templates
+templates = Jinja2Templates(directory="app/templates")
+
+# Supabase
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+# Home page → login
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
-@app.post("/login")
-def login(request: Request, email: str = Form(...), password: str = Form(...)):
+# Handle login form POST
+@app.post("/login", response_class=HTMLResponse)
+async def login(request: Request, email: str = Form(...), password: str = Form(...)):
     try:
-        user = supabase.auth.sign_in_with_password({"email": email, "password": password})
-        auth_id = user.user.id
-        role = get_user_role(auth_id)
-
-        if not role:
-            return templates.TemplateResponse("login.html", {"request": request, "error": "❌ Not authorized."})
-
-        response = RedirectResponse(url="/dashboard", status_code=303)
-        response.set_cookie("email", email)
-        response.set_cookie("auth_id", auth_id)
-        response.set_cookie("role", role)
-        return response
-
+        auth_response = supabase.auth.sign_in_with_password({
+            "email": email,
+            "password": password
+        })
+        if auth_response.user:
+            return RedirectResponse("/dashboard", status_code=302)
+        else:
+            return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid credentials."})
     except Exception as e:
-        return templates.TemplateResponse("login.html", {"request": request, "error": f"Login failed: {e}"})
+        return templates.TemplateResponse("login.html", {"request": request, "error": str(e)})
 
-@app.get("/dashboard")
-def dashboard(request: Request):
-    return templates.TemplateResponse("dashboard.html", {"request": request})
+# Turbidity dashboard
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard(request: Request):
+    try:
+        result = supabase.table("turbidity_data").select("*").order("timestamp", desc=True).limit(50).execute()
+        data = result.data
+    except Exception as e:
+        data = []
+        print("Supabase error:", e)
 
-@app.get("/config")
-def config_page(request: Request):
-    return templates.TemplateResponse("config.html", {"request": request})
+    return templates.TemplateResponse("dashboard.html", {"request": request, "data": data})
