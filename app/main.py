@@ -12,11 +12,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 app = FastAPI()
-app.add_middleware(SessionMiddleware, secret_key="your-secret-key")
+app.add_middleware(SessionMiddleware, secret_key="super-secret")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
 
-# Supabase setup
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -38,42 +37,55 @@ def dashboard(request: Request):
     if "user" not in request.session:
         return RedirectResponse(url="/", status_code=302)
 
-    # Fetch turbidity data
-    response = supabase.table("turbidity_data").select("*").execute()
-    data = response.data
+    try:
+        response = supabase.table("turbidity_data").select("*").limit(500).execute()
+        data = response.data
+    except Exception as e:
+        return templates.TemplateResponse("dashboard.html", {
+            "request": request,
+            "plot1": "",
+            "plot2": "",
+            "error": f"Error loading data from Supabase: {str(e)}"
+        })
 
     if not data:
         return templates.TemplateResponse("dashboard.html", {
             "request": request,
             "plot1": "",
             "plot2": "",
-            "error": "No data found in Supabase"
+            "error": "No data available"
         })
 
     df = pd.DataFrame(data)
 
-    if "sensor_id" not in df.columns:
+    if "sensor_id" not in df.columns or "raw_value" not in df.columns or "voltage" not in df.columns:
         return templates.TemplateResponse("dashboard.html", {
             "request": request,
             "plot1": "",
             "plot2": "",
-            "error": "Missing 'sensor_id' column in data"
+            "error": "Missing required columns in database"
         })
+
+    df["timestamp"] = pd.to_datetime(df["timestamp"])
 
     sensor1 = df[df["sensor_id"] == "Sensor1"]
     sensor2 = df[df["sensor_id"] == "Sensor2"]
 
-    # Chart 1: Raw data
+    # Plot raw_value
     fig1 = go.Figure()
-    fig1.add_trace(go.Scatter(x=sensor1["timestamp"], y=sensor1["raw_value"], name="Sensor1", line=dict(color="orange")))
-    fig1.add_trace(go.Scatter(x=sensor2["timestamp"], y=sensor2["raw_value"], name="Sensor2", line=dict(color="white")))
-    fig1.update_layout(title="Raw Values", plot_bgcolor="black", paper_bgcolor="black", font=dict(color="white"))
+    fig1.add_trace(go.Scatter(x=sensor1["timestamp"], y=sensor1["raw_value"], mode='lines+markers',
+                              name="Sensor1", line=dict(color="orange")))
+    fig1.add_trace(go.Scatter(x=sensor2["timestamp"], y=sensor2["raw_value"], mode='lines+markers',
+                              name="Sensor2", line=dict(color="white")))
+    fig1.update_layout(title="Raw Data", paper_bgcolor="#111", plot_bgcolor="#111", font_color="white")
 
-    # Chart 2: Voltage
+    # Plot voltage
     fig2 = go.Figure()
-    fig2.add_trace(go.Scatter(x=sensor1["timestamp"], y=sensor1["voltage"], name="Sensor1", line=dict(color="orange")))
-    fig2.add_trace(go.Scatter(x=sensor2["timestamp"], y=sensor2["voltage"], name="Sensor2", line=dict(color="white")))
-    fig2.update_layout(title="Voltage", plot_bgcolor="black", paper_bgcolor="black", font=dict(color="white"))
+    fig2.add_trace(go.Scatter(x=sensor1["timestamp"], y=sensor1["voltage"], mode='lines+markers',
+                              name="Sensor1", line=dict(color="orange", dash='dash')))
+    fig2.add_trace(go.Scatter(x=sensor2["timestamp"], y=sensor2["voltage"], mode='lines+markers',
+                              name="Sensor2", line=dict(color="white", dash='dash')))
+    fig2.update_layout(title="Voltage", paper_bgcolor="#111", plot_bgcolor="#111", font_color="white")
 
     plot1 = fig1.to_html(full_html=False)
     plot2 = fig2.to_html(full_html=False)
