@@ -16,6 +16,7 @@ templates = Jinja2Templates(directory="app/templates")
 def login_page(request: Request):
     return templates.TemplateResponse("login.html", {"request": request})
 
+
 @app.post("/login")
 def login(request: Request, email: str = Form(...), password: str = Form(...)):
     try:
@@ -26,7 +27,9 @@ def login(request: Request, email: str = Form(...), password: str = Form(...)):
             return response
     except Exception as e:
         print("Login failed:", e)
+
     return templates.TemplateResponse("login.html", {"request": request, "error": "Invalid credentials"})
+
 
 @app.get("/dashboard", response_class=HTMLResponse)
 def dashboard(request: Request):
@@ -34,27 +37,31 @@ def dashboard(request: Request):
     if not email:
         return RedirectResponse(url="/", status_code=302)
 
-    data = supabase.table("turbidity_data").select("*").order("timestamp", desc=True).limit(100).execute()
-    rows = data.data[::-1]
+    # Fetch latest 100 rows from Supabase
+    result = supabase.table("turbidity_data").select("*").order("timestamp", desc=True).limit(100).execute()
+    rows = result.data[::-1]  # Reverse to show oldest to newest
     df = pd.DataFrame(rows)
 
     if df.empty:
-        return templates.TemplateResponse("dashboard.html", {"request": request, "graph": "<p>No data available.</p>"})
+        return templates.TemplateResponse("dashboard.html", {
+            "request": request,
+            "graph": "<p>No data available.</p>"
+        })
 
     fig = make_subplots(
         rows=1,
         cols=2,
         subplot_titles=("Raw Data", "Voltage"),
-        horizontal_spacing=0.2
+        horizontal_spacing=0.15
     )
 
-    # Raw values
+    # Plot raw values
     fig.add_trace(go.Scatter(
         x=df[df["sensor_id"] == "Sensor1"]["timestamp"],
         y=df[df["sensor_id"] == "Sensor1"]["raw_value"],
         mode="lines+markers",
         name="Sensor1 Raw",
-        line=dict(color="white")
+        line=dict(color="orange")
     ), row=1, col=1)
 
     fig.add_trace(go.Scatter(
@@ -62,16 +69,16 @@ def dashboard(request: Request):
         y=df[df["sensor_id"] == "Sensor2"]["raw_value"],
         mode="lines+markers",
         name="Sensor2 Raw",
-        line=dict(color="orange")
+        line=dict(color="white")
     ), row=1, col=1)
 
-    # Voltage values
+    # Plot voltage values
     fig.add_trace(go.Scatter(
         x=df[df["sensor_id"] == "Sensor1"]["timestamp"],
         y=df[df["sensor_id"] == "Sensor1"]["voltage"],
         mode="lines+markers",
         name="Sensor1 Voltage",
-        line=dict(color="white", dash="dot")
+        line=dict(color="orange", dash="dot")
     ), row=1, col=2)
 
     fig.add_trace(go.Scatter(
@@ -79,12 +86,11 @@ def dashboard(request: Request):
         y=df[df["sensor_id"] == "Sensor2"]["voltage"],
         mode="lines+markers",
         name="Sensor2 Voltage",
-        line=dict(color="orange", dash="dot")
+        line=dict(color="white", dash="dot")
     ), row=1, col=2)
 
     fig.update_layout(
         template="plotly_dark",
-        showlegend=True,
         height=500,
         autosize=True,
         margin=dict(t=40, b=40, l=40, r=40),
@@ -92,7 +98,12 @@ def dashboard(request: Request):
     )
 
     graph_html = fig.to_html(full_html=False, config={"responsive": True})
-    return templates.TemplateResponse("dashboard.html", {"request": request, "graph": graph_html})
+
+    return templates.TemplateResponse("dashboard.html", {
+        "request": request,
+        "graph": graph_html
+    })
+
 
 @app.get("/config", response_class=HTMLResponse)
 def config_page(request: Request):
