@@ -1,64 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Dashboard</title>
-    <link rel="stylesheet" href="/static/style.css">
-    <style>
-        body {
-            background-color: #1e1e1e;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: white;
-            margin: 0;
-            padding: 0;
-        }
-
-        .container {
-            padding: 20px;
-        }
-
-        .charts {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            justify-content: center;
-        }
-
-        .chart-box {
-            flex: 1 1 45%;
-            min-width: 300px;
-            max-width: 100%;
-        }
-
-        h1 {
-            text-align: center;
-            margin-bottom: 30px;
-            color: white;
-        }
-
-        .no-data {
-            text-align: center;
-            margin-top: 50px;
-            font-size: 20px;
-            color: #ff6666;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
-    <div class="container">
-        <h1>Turbidity Dashboard</h1>
-        {% if no_data %}
-            <div class="no-data">No data available from Supabase.</div>
-        {% else %}
-            <div class="charts">
-                <div class="chart-box">
-                    {{ chart1 | safe }}
-                </div>
-                <div class="chart-box">
-                    {{ chart2 | safe }}
-                </div>
-            </div>
-        {% endif %}
+  <div class="container">
+    <h1 class="dashboard-title">Turbidity Dashboard</h1>
+    <div class="chart-container">
+      {{ plot_html | safe }}
     </div>
+  </div>
 </body>
 </html>
