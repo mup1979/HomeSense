@@ -8,24 +8,7 @@
   <div class="login-box">
     <h2>🌊 Turbidity Dashboard</h2>
 
-    <table border="1" cellpadding="8">
-      <thead>
-        <tr>
-          <th>Timestamp</th>
-          <th>Sensor</th>
-          <th>Value</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in data %}
-        <tr>
-          <td>{{ row.timestamp }}</td>
-	  <td>{{ row.sensor_id }}</td>
-	  <td>{{ row.raw_value }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <img src="/chart" alt="Turbidity Chart" style="width:100%; max-width:600px; border:1px solid #ccc; border-radius:8px;">
 
     <p><a href="/config">⚙️ Go to Config</a></p>
   </div>
