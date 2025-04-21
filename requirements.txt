@@ -5,3 +5,4 @@ jinja2
 httpx
 supabase
 python-multipart
+matplotlib
