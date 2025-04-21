@@ -6,3 +6,4 @@ httpx
 supabase
 pandas
 plotly
+python-multipart
