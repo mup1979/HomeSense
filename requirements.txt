@@ -8,3 +8,4 @@ python-multipart
 matplotlib
 plotly
 plotly
+pandas
