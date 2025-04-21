@@ -1,10 +1,18 @@
+/* Make background video full screen */
+#bg-video {
+  position: fixed;
+  top: 0;
+  left: 0;
+  min-width: 100%;
+  min-height: 100%;
+  object-fit: cover;
+  z-index: -1;
+}
+
+/* Style the login box */
 body {
   margin: 0;
   font-family: Arial, sans-serif;
-  background-image: url("/static/assets/Home.jpeg");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
   height: 100vh;
   display: flex;
   justify-content: center;
@@ -18,4 +26,5 @@ body {
   box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
   width: 300px;
   text-align: center;
+  z-index: 1;
 }
