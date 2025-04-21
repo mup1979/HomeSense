@@ -57,8 +57,8 @@ async def dashboard(request: Request):
     last_day = now - timedelta(days=1)
     df = df[df["timestamp"] >= last_day]
 
-    sensor1 = df[df["sensor_id"] == "Sensor1"]
-    sensor2 = df[df["sensor_id"] == "Sensor2"]
+    sensor1 = df[df["sensor_id"] == "Sensor1"].sort_values("timestamp")
+    sensor2 = df[df["sensor_id"] == "Sensor2"].sort_values("timestamp")
     print(f"📊 Sensor1: {len(sensor1)}, Sensor2: {len(sensor2)}")
 
     # Raw Value Chart
