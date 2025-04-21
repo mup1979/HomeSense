@@ -2,16 +2,34 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dashboard</title>
+  <title>Turbidity Dashboard</title>
+  <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
-  <div class="container">
-    <h1 class="dashboard-title">Turbidity Dashboard</h1>
-    <div class="chart-container">
-      {{ plot_html | safe }}
+  <div class="dashboard-container">
+    <h1>Turbidity Dashboard</h1>
+    <div class="charts">
+      <div class="chart-box">
+        <h2>Raw Data</h2>
+        <div id="rawChart"></div>
+      </div>
+      <div class="chart-box">
+        <h2>Voltage</h2>
+        <div id="voltageChart"></div>
+      </div>
+    </div>
+    <div style="text-align: center; margin-top: 1rem;">
+      <a href="/config" class="config-link">Go to Config</a>
     </div>
   </div>
+
+  <script>
+    const rawChartData = {{ raw_chart | safe }};
+    const voltageChartData = {{ voltage_chart | safe }};
+
+    Plotly.newPlot('rawChart', rawChartData.data, rawChartData.layout);
+    Plotly.newPlot('voltageChart', voltageChartData.data, voltageChartData.layout);
+  </script>
 </body>
 </html>
