@@ -1,10 +1,95 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Configuration</title>
+  <meta charset="UTF-8">
+  <title>Sensor Configuration</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    body {
+      background-color: #121212;
+      color: #ffffff;
+      font-family: sans-serif;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .config-form {
+      width: 80%;
+      margin: auto;
+      background: #1e1e1e;
+      padding: 20px;
+      border-radius: 10px;
+    }
+
+    .config-block {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+
+    .config-block label {
+      flex: 1;
+      font-weight: bold;
+    }
+
+    .config-block input[type="number"],
+    .config-block select {
+      flex: 2;
+      padding: 8px;
+      margin-left: 10px;
+      border-radius: 4px;
+      border: none;
+    }
+
+    .config-block input[type="checkbox"] {
+      transform: scale(1.5);
+      margin-left: 10px;
+    }
+
+    button {
+      width: 100%;
+      padding: 15px;
+      background-color: orange;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 30px;
+    }
+
+    button:hover {
+      background-color: darkorange;
+    }
+  </style>
 </head>
 <body>
-  <h1>⚙️ Device Configuration</h1>
-  <p><a href="/dashboard">📊 Back to Dashboard</a></p>
+  <h1>Sensor Configurations</h1>
+
+  {% for config in config_data %}
+  <form class="config-form" action="/update_config" method="post">
+    <div class="config-block">
+      <label>Sensor Type:</label>
+      <input type="text" name="sensor_type" value="{{ config.sensor_type }}" readonly />
+    </div>
+
+    <div class="config-block">
+      <label>Interval (seconds):</label>
+      <input type="number" name="interval_sec" value="{{ config.interval_sec }}" min="1" required />
+    </div>
+
+    <div class="config-block">
+      <label>Enabled:</label>
+      <input type="checkbox" name="enabled" value="true" {% if config.enabled %}checked{% endif %} />
+    </div>
+
+    <button type="submit">Save Changes</button>
+  </form>
+  {% endfor %}
 </body>
 </html>
