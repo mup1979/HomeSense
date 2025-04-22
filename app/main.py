@@ -51,7 +51,6 @@ async def dashboard(request: Request):
         print("❌ 'sensor_id' column not found in data.")
         return templates.TemplateResponse("dashboard.html", {"request": request, "plot_raw": "", "plot_voltage": ""})
 
-    # Convert timestamp to datetime and filter last 24 hours
     df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
     now = datetime.now(timezone.utc)
     last_day = now - timedelta(days=1)
@@ -70,7 +69,8 @@ async def dashboard(request: Request):
         template="plotly_dark",
         margin=dict(l=40, r=40, t=40, b=40),
         height=400,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        yaxis=dict(range=[12000, 16000])
     )
     plot_raw = fig_raw.to_html(full_html=False)
 
@@ -83,7 +83,8 @@ async def dashboard(request: Request):
         template="plotly_dark",
         margin=dict(l=40, r=40, t=40, b=40),
         height=400,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        yaxis=dict(range=[1.0, 4.0])
     )
     plot_voltage = fig_voltage.to_html(full_html=False)
 
