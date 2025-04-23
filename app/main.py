@@ -70,7 +70,7 @@ async def dashboard(request: Request):
         margin=dict(l=40, r=40, t=40, b=40),
         height=400,
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        yaxis=dict(range=[12000, 16000])
+        yaxis=dict(range=[8000, 16000])
     )
     plot_raw = fig_raw.to_html(full_html=False)
 
