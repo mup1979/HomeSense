@@ -58,10 +58,16 @@ async def dashboard(request: Request):
     sensor2 = df[df["sensor_id"] == "Sensor2"].sort_values("timestamp")
     print(f"📊 Sensor1: {len(sensor1)}, Sensor2: {len(sensor2)}")
 
-    # Raw Value Chart
+    # Raw Value Chart (Orange / White)
     fig_raw = go.Figure()
-    fig_raw.add_trace(go.Scatter(x=sensor1["timestamp"], y=sensor1["raw_value"], mode="lines", name="Sensor1"))
-    fig_raw.add_trace(go.Scatter(x=sensor2["timestamp"], y=sensor2["raw_value"], mode="lines", name="Sensor2"))
+    fig_raw.add_trace(go.Scatter(
+        x=sensor1["timestamp"], y=sensor1["raw_value"], mode="lines", name="Sensor1",
+        line=dict(color="orange")
+    ))
+    fig_raw.add_trace(go.Scatter(
+        x=sensor2["timestamp"], y=sensor2["raw_value"], mode="lines", name="Sensor2",
+        line=dict(color="white")
+    ))
     fig_raw.update_layout(
         title="Raw Turbidity Values (Last 7 Days)",
         template="plotly_dark",
@@ -72,10 +78,16 @@ async def dashboard(request: Request):
     )
     plot_raw = fig_raw.to_html(full_html=False)
 
-    # Voltage Chart
+    # Voltage Chart (Orange / White)
     fig_voltage = go.Figure()
-    fig_voltage.add_trace(go.Scatter(x=sensor1["timestamp"], y=sensor1["voltage"], mode="lines", name="Sensor1"))
-    fig_voltage.add_trace(go.Scatter(x=sensor2["timestamp"], y=sensor2["voltage"], mode="lines", name="Sensor2"))
+    fig_voltage.add_trace(go.Scatter(
+        x=sensor1["timestamp"], y=sensor1["voltage"], mode="lines", name="Sensor1",
+        line=dict(color="orange")
+    ))
+    fig_voltage.add_trace(go.Scatter(
+        x=sensor2["timestamp"], y=sensor2["voltage"], mode="lines", name="Sensor2",
+        line=dict(color="white")
+    ))
     fig_voltage.update_layout(
         title="Sensor Voltage (Last 7 Days)",
         template="plotly_dark",
