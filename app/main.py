@@ -37,24 +37,22 @@ async def dashboard(request: Request):
         return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
 
     print("📡 Fetching data from Supabase...")
-    response = supabase.table("turbidity_data").select("*").limit(1000).execute()
+    seven_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
+    response = supabase.table("turbidity_data").select("*").gte("timestamp", seven_days_ago.isoformat()).execute()
     data = response.data
 
     if not data:
         print("⚠️ No data received from Supabase.")
-        return templates.TemplateResponse("dashboard.html", {"request": request, "plot_raw": "", "plot_voltage": ""})
+        return templates.TemplateResponse("dashboard.html", {"request": request})
 
     df = pd.DataFrame(data)
     print(f"✅ DataFrame loaded: {len(df)} rows")
 
     if "sensor_id" not in df.columns:
         print("❌ 'sensor_id' column not found in data.")
-        return templates.TemplateResponse("dashboard.html", {"request": request, "plot_raw": "", "plot_voltage": ""})
+        return templates.TemplateResponse("dashboard.html", {"request": request})
 
     df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
-    now = datetime.now(timezone.utc)
-    last_day = now - timedelta(days=1)
-    df = df[df["timestamp"] >= last_day]
 
     sensor1 = df[df["sensor_id"] == "Sensor1"].sort_values("timestamp")
     sensor2 = df[df["sensor_id"] == "Sensor2"].sort_values("timestamp")
@@ -62,10 +60,10 @@ async def dashboard(request: Request):
 
     # Raw Value Chart
     fig_raw = go.Figure()
-    fig_raw.add_trace(go.Scatter(x=sensor1["timestamp"], y=sensor1["raw_value"], mode="lines", name="Sensor1 Raw", line=dict(color="orange")))
-    fig_raw.add_trace(go.Scatter(x=sensor2["timestamp"], y=sensor2["raw_value"], mode="lines", name="Sensor2 Raw", line=dict(color="white")))
+    fig_raw.add_trace(go.Scatter(x=sensor1["timestamp"], y=sensor1["raw_value"], mode="lines", name="Sensor1"))
+    fig_raw.add_trace(go.Scatter(x=sensor2["timestamp"], y=sensor2["raw_value"], mode="lines", name="Sensor2"))
     fig_raw.update_layout(
-        title="Raw Turbidity Values",
+        title="Raw Turbidity Values (Last 7 Days)",
         template="plotly_dark",
         margin=dict(l=40, r=40, t=40, b=40),
         height=400,
@@ -76,10 +74,10 @@ async def dashboard(request: Request):
 
     # Voltage Chart
     fig_voltage = go.Figure()
-    fig_voltage.add_trace(go.Scatter(x=sensor1["timestamp"], y=sensor1["voltage"], mode="lines", name="Sensor1 Voltage", line=dict(color="orange", dash="dash")))
-    fig_voltage.add_trace(go.Scatter(x=sensor2["timestamp"], y=sensor2["voltage"], mode="lines", name="Sensor2 Voltage", line=dict(color="white", dash="dash")))
+    fig_voltage.add_trace(go.Scatter(x=sensor1["timestamp"], y=sensor1["voltage"], mode="lines", name="Sensor1"))
+    fig_voltage.add_trace(go.Scatter(x=sensor2["timestamp"], y=sensor2["voltage"], mode="lines", name="Sensor2"))
     fig_voltage.update_layout(
-        title="Sensor Voltage",
+        title="Sensor Voltage (Last 7 Days)",
         template="plotly_dark",
         margin=dict(l=40, r=40, t=40, b=40),
         height=400,
