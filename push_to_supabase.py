@@ -5,7 +5,7 @@ import random
 
 # Supabase credentials
 SUPABASE_URL = "https://jqoukirgtuhkuibvulni.supabase.co"
-SUPABASE_KEY = "your-new-secret-key-here"  # replace with fresh token
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impxb3VraXJndHVoa3VpYnZ1bG5pIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUwNDk0MDYsImV4cCI6MjA2MDYyNTQwNn0.Cw-OxxX3iZgXbDdTXvqfsF6iFjaec2BxfAFNcKmRxs8"
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
