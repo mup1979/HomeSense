@@ -52,7 +52,8 @@ async def dashboard(request: Request):
         print("❌ 'sensor_id' column not found in data.")
         return templates.TemplateResponse("dashboard.html", {"request": request})
 
-    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+    # FIXED: Apply ISO8601 parsing for timestamps
+    df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, format='ISO8601')
 
     sensor1 = df[df["sensor_id"] == "Sensor1"].sort_values("timestamp")
     sensor2 = df[df["sensor_id"] == "Sensor2"].sort_values("timestamp")
