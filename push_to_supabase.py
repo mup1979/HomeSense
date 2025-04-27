@@ -15,7 +15,7 @@ SITE_NAME = "SiteA"
 # Sensor definitions: sensor_type -> sensor_ids
 SENSOR_MAP = {
     "turbidity": ["Sensor1", "Sensor2"],
-    # Add more types as needed
+    # Add more sensor types as needed
 }
 
 CONFIG_CACHE = {}  # sensor_type -> (timestamp, config)
@@ -35,10 +35,8 @@ def get_config(sensor_type):
             .execute()
 
         data = response.data
-        print(f"[DEBUG] Config for {sensor_type}: {data}")
 
         if len(data) != 1:
-            print(f"[WARN] {sensor_type}: expected 1 row, got {len(data)} — skipping")
             CONFIG_CACHE[sensor_type] = (now, None)
             return None
 
@@ -48,6 +46,11 @@ def get_config(sensor_type):
     except Exception as e:
         print(f"[ERROR] {sensor_type}: Could not fetch config: {e}")
         return None
+
+def round_timestamp(interval_sec):
+    now = datetime.now(timezone.utc)
+    rounded = round(now.timestamp() / interval_sec) * interval_sec
+    return datetime.fromtimestamp(rounded, tz=timezone.utc).isoformat()
 
 def read_sensor(sensor_type, sensor_id):
     raw_value = random.randint(14000, 16000)
@@ -63,7 +66,6 @@ def upload_batch(sensor_data, sensor_type, timestamp):
                 "sensor_type": sensor_type
             })
         supabase.table("turbidity_data").insert(sensor_data).execute()
-        print(f"[{timestamp}] Uploaded batch for {sensor_type}")
     except Exception as e:
         print(f"[ERROR] Failed to upload {sensor_type} batch: {e}")
 
@@ -81,8 +83,8 @@ if __name__ == "__main__":
             last = last_run.get(sensor_type, 0)
 
             if now - last >= interval:
-                # Use one timestamp per batch, in ISO format with milliseconds
-                timestamp = datetime.now(timezone.utc).isoformat(timespec='milliseconds')
+                # Use rounded timestamp for alignment
+                timestamp = round_timestamp(interval)
 
                 sensor_data = []
                 for sensor_id in sensor_ids:
