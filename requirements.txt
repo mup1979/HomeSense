@@ -1,0 +1,5 @@
+gunicorn
+dash
+plotly
+pandas
+pytz
