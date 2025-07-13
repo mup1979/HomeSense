@@ -9,6 +9,8 @@ import xmlrpc.client
 import pytz
 import os
 import dash_auth  # New import for authentication
+from sklearn.linear_model import LinearRegression
+import numpy as np
 
 # === CONFIGURATION ===
 app = dash.Dash(__name__)
@@ -76,15 +78,17 @@ def load_data():
     current_cumulative = float(shift_sum_tonnes)
     # Last 5 minutes
     last_5min_start = now - timedelta(minutes=5)
-    last_df = df[df['time_stamp'] >= last_5min_start]
-    if last_df.empty:
+    last_df = df[df['time_stamp'] >= last_5min_start].copy()
+    if len(last_df) < 2:
         current_tph = 0
     else:
-        min_time = last_df['time_stamp'].min()
-        max_time = last_df['time_stamp'].max()
-        total_mass = last_df['mass'].sum()
-        delta_min = (max_time - min_time).total_seconds() / 60 if max_time > min_time else 0
-        current_tph = round((total_mass / delta_min) * 60 * 2, 2) if delta_min > 0 else 0
+        last_df['cum_mass'] = last_df['mass'].cumsum()
+        last_df['time_sec'] = (last_df['time_stamp'] - last_df['time_stamp'].min()).dt.total_seconds()
+        X = last_df['time_sec'].values.reshape(-1, 1)
+        y = last_df['cum_mass'].values
+        reg = LinearRegression().fit(X, y)
+        rate_tps = reg.coef_[0]  # tons per second
+        current_tph = round(rate_tps * 3600 * 2, 2)  # to TPH with *2 scaling
     current_tph = float(current_tph)
 
     # === Compute shift_summary_view ===
