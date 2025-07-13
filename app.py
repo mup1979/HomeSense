@@ -8,10 +8,18 @@ from datetime import datetime, timedelta, time
 import xmlrpc.client
 import pytz
 import os
+import dash_auth  # New import for authentication
 
 # === CONFIGURATION ===
 app = dash.Dash(__name__)
 server = app.server  # Required for deployment with Gunicorn
+
+# Add Basic Auth (credentials from env vars)
+AUTH_PAIRS = {
+    os.environ.get('DASH_USERNAME', 'default_user'): os.environ.get('DASH_PASSWORD', 'default_pass')
+}
+dash_auth.BasicAuth(app, AUTH_PAIRS)
+
 ODOO_URL = os.environ['ODOO_URL']
 ODOO_DB = os.environ['ODOO_DB']
 ODOO_USERNAME = os.environ['ODOO_USERNAME']
